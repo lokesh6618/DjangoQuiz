@@ -1,0 +1,54 @@
+# Python
+*.pyc
+__pycache__/
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Django
+*.log
+*.pot
+*.mo
+*.js.map
+*.css.map
+db.sqlite3
+media/ # User-uploaded media files
+static_root/ # Collected static files (if using collectstatic)
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+
+# Operating System Files
+.DS_Store
+.localized
+.Trashes
+ehthumbs.db
+desktop.ini
+
+# Virtualenv
+# If you create a virtual environment in the project root, uncomment one of these:
+# venv/
+# .env/
+
+# PyCharm
+# .idea/
+# *.iml
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Docker
+.dockerignore
+
+# Other common files
+.env # Environment variables (e.g., SECRET_KEY, database credentials)
+.flaskenv # Flask specific environment variables
+*.sqlite3-journal
