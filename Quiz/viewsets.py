@@ -17,16 +17,16 @@ class StudentViewSet(viewsets.ModelViewSet):
 class QuestionPaperViewSet(viewsets.ModelViewSet):
     queryset         = QuestionPaper.objects.all()
     serializer_class = QuestionPaperSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = []
 
 class QuestionBankViewSet(viewsets.ModelViewSet):
     queryset         = QuestionBank.objects.all()
     serializer_class = QuestionBankSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = []
     filterset_fields = ["paper"]
 
 class TestResultViewSet(viewsets.ModelViewSet):
     queryset         = TestResult.objects.all()
     serializer_class = TestResultSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = []
     filterset_fields = ["student", "paper"]

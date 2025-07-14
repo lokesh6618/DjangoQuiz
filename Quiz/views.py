@@ -6,7 +6,6 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.utils import timezone
 
-from rest_framework import viewsets, permissions, mixins
 from .models import (
     Teacher, Student, QuestionPaper, QuestionBank, Question, Choice, QuizAttempt, TestResult
 )
@@ -20,8 +19,12 @@ from .viewsets import (
 
 # 1.  Landing page ────────────────────────────────────────────────────────────
 def home(request):
-    """Simple landing / dashboard page."""
-    return render(request, "Quiz/home.html")
+    """
+    Landing page listing all available papers for the drop‑down.
+    Assumes the logged‑in user is a Teacher (or staff).
+    """
+    papers = QuestionPaper.objects.all()
+    return render(request, "Quiz/home.html", {"papers": papers})
 
 
 # 2.  Register / Login / Logout ──────────────────────────────────────────────
@@ -61,19 +64,63 @@ def logout_page(request):
 @login_required
 def start_quiz(request):
     """
-    • Creates a new QuizAttempt row
-    • Fetches the first 20 questions (code 30‑1‑1, CBSE 2024)
-    • Puts attempt_id in session, then renders quiz.html
+    GET params:
+      ?paper=<paper_id>&student=<student_name>
+    Creates Student (if needed) and a TestResult row, then renders quiz page.
     """
-    # wipe any old, unfinished attempt
-    request.session.pop("attempt_id", None)
+    
+    # print("request : ", request)
+    
+    paper_id     = request.GET.get("paper") or request.GET.get("question_paper_id")
+    # print("paper_id : ", paper_id)
+    
+    student_name = request.GET.get("student", "").strip() or request.GET.get("student_name", "").strip()
+    # print("student_name : ", student_name)
+    
+    if not paper_id or not student_name:
+        return redirect("home")
 
-    questions = Question.objects.all()[:20]              # guaranteed order
-    attempt = QuizAttempt.objects.create(user=request.user)
+    paper     = get_object_or_404(QuestionPaper, id=paper_id)
+    questions = paper.questions.all()[:paper.max_marks]
+
+    # Map auth user to teacher
+    teacher = Teacher.objects.filter(email=request.user.email).first()
+    if not teacher:
+        teacher = Teacher.objects.create(
+            email=request.user.email,
+            teacher_id=f"AUTH-{request.user.id}",
+            name=request.user.get_full_name() or request.user.username,
+            password="unused"
+        )
+
+    # Ensure student exists
+    student, _ = Student.objects.get_or_create(
+        teacher=teacher,
+        student_id=student_name.replace(" ", "").lower(),
+        defaults={"name": student_name}
+    )
+
+    # Create a test attempt
+    attempt = TestResult.objects.create(
+        student=student,
+        paper=paper,
+        start_time=timezone.now(),
+        end_time=timezone.now(),  # will update later
+        correct=0,
+        incorrect=0,
+        not_attempted=0,
+        score=0,
+        maximum_score=paper.max_marks,
+    )
+
     request.session["attempt_id"] = attempt.id
 
-    return render(request, "Quiz/quiz.html", {"questions": questions})
-
+    return render(request, "Quiz/quiz.html", {
+        "questions": questions,
+        "paper": paper,
+        "question_paper": paper,
+        "student_name": student.name,
+    })
 
 @login_required
 def submit_quiz(request):
@@ -84,54 +131,42 @@ def submit_quiz(request):
     if request.method != "POST":
         return redirect("home")
 
-    attempt_id = request.session.get("attempt_id")
+    attempt_id = request.session.pop("attempt_id", None)
     if not attempt_id:
         return HttpResponse("No active attempt.", status=400)
 
-    attempt = get_object_or_404(QuizAttempt, id=attempt_id, user=request.user)
-    questions = Question.objects.all()[:20]
+    attempt   = get_object_or_404(TestResult, id=attempt_id)
+    questions = attempt.paper.questions.all()
 
     total_attempted = correct = 0
-
     for q in questions:
-        choice_id = request.POST.get(f"q{q.id}")
-        if not choice_id:
+        val = request.POST.get(f"q{q.id}")
+        if not val:  # empty
             continue
         total_attempted += 1
-        chosen = Choice.objects.filter(id=choice_id, question=q).first()
-        if chosen and chosen.is_correct:
+        if val.strip() == q.answer.strip():
             correct += 1
 
-    attempt.total_attempted = total_attempted
-    attempt.correct         = correct
-    attempt.wrong           = total_attempted - correct
-    attempt.score           = correct               # 1 mark each
-    attempt.finished_at = timezone.now()
-    attempt.duration    = int(
-        (attempt.finished_at - attempt.started_at).total_seconds()
-    )
-
+    attempt.correct        = correct
+    attempt.incorrect      = total_attempted - correct
+    attempt.not_attempted  = len(questions) - total_attempted
+    attempt.score          = correct                  # 1 mark each
+    attempt.end_time       = timezone.now()
     attempt.save()
-
-    # clean up session so the user can’t resubmit
-    request.session.pop("attempt_id", None)
 
     return redirect("result", attempt_id=attempt.id)
 
 
 @login_required
 def result(request, attempt_id):
-    attempt = get_object_or_404(QuizAttempt, id=attempt_id, user=request.user)
-
-    # Provide the same context names your original template expects
-    percent = attempt.score / 20 * 100          # 20 questions → 20 marks
-    context = {
-        "score":   attempt.score,
+    attempt = get_object_or_404(TestResult, id=attempt_id)
+    percent = attempt.score / attempt.maximum_score * 100
+    return render(request, "Quiz/result.html", {
+        "attempt": attempt,
+        "score": attempt.score,
         "percent": round(percent, 2),
-        "time":    attempt.duration or 0,
+        "time": int((attempt.end_time - attempt.start_time).total_seconds()),
         "correct": attempt.correct,
-        "wrong":   attempt.wrong,
-        "total":   20,
-        "attempt": attempt,                      # in case result.html needs more
-    }
-    return render(request, "Quiz/result.html", context)
+        "wrong": attempt.incorrect,
+        "total": attempt.maximum_score,
+    })

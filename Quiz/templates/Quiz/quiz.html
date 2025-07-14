@@ -4,12 +4,14 @@
 
 {% block content %}
   <h2 class="text-2xl font-bold mb-4 text-center">
-    Maths (2024 • Code 30‑1‑1) — 20 Questions • 30 min • 20 marks
+    {{ question_paper.name }} ({{ question_paper.subject }}) — {{ questions|length }} Questions • {{ question_paper.duration_min }} min • {{ question_paper.max_marks }} marks
   </h2>
 
   <!-- Countdown -->
   <div id="clock"
        class="mb-6 text-center text-lg font-semibold text-red-600"></div>
+
+  <p class="text-center text-gray-600 mb-4">👤 Student: <strong>{{ student_name }}</strong></p>
 
   <!-- Quiz form -->
   <form id="quiz-form"
@@ -18,13 +20,16 @@
         class="space-y-8">
     {% csrf_token %}
 
+    <input type="hidden" name="question_paper_id" value="{{ question_paper.id }}">
+    <input type="hidden" name="student_name" value="{{ student_name }}">
+
     {% for q in questions %}
       <div class="bg-white shadow-md rounded-xl p-6">
         <!-- Stem image -->
-        {% if q.image %}
-          <img src="{{ q.image.url }}"
-               alt="Question {{ forloop.counter }}"
-               class="w-full max-w-2xl mx-auto mb-4">
+        {% if q.image_path %}
+          <img src="{{ q.image_path|cut:'/home/fighter/fighter_dev/quiz_1/DjangoQuiz/media'}}"
+              alt="Question {{ forloop.counter }}"
+              class="w-full max-w-2xl mx-auto mb-4">
         {% endif %}
 
         <!-- Option radios -->
@@ -32,7 +37,7 @@
           <li>
             <label class="flex items-center gap-2">
               <input type="radio" name="q{{ q.id }}" value="1"
-                     class="form-radio" required>
+                     class="form-radio">
               <span><strong>(a)</strong> {{ q.op1 }}</span>
             </label>
           </li>
@@ -67,7 +72,7 @@
     <div class="text-center">
       <button type="submit"
               class="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg">
-        Submit Now
+        Submit Now
       </button>
     </div>
   </form>
@@ -75,8 +80,8 @@
 
 {% block script %}
 <script>
-  /* 30‑minute countdown */
-  const deadline   = Date.now() + 30 * 60 * 1000;
+  /* Countdown logic */
+  const deadline   = Date.now() + {{ question_paper.duration_min }} * 60 * 1000;
   const clock      = document.getElementById("clock");
   const quizForm   = document.getElementById("quiz-form");
 
@@ -89,7 +94,9 @@
       `⏳ ${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
   }
   updateClock();
+
   const iv = setInterval(updateClock, 1000);
   quizForm.addEventListener("submit", () => clearInterval(iv));
+
 </script>
 {% endblock script %}
