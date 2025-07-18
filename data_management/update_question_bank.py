@@ -9,6 +9,7 @@ paper_id = res.json()[0]['id']
 # Define the answers for each question
 # This dictionary maps question number (int) to its answer (str)
 questiona_all = {
+    1: "2",
     2: "4",
     3: "4",
     4: "2",
