@@ -56,6 +56,7 @@ class QuizAttempt(models.Model):
     def __str__(self):
         return f"{self.user} – {self.score}/20 on {self.started_at:%d %b %Y %H:%M}"
 
+# ---------------------------------- updated schemas-------------------------------------------
 
 class QuestionPaper(models.Model):
     """
@@ -134,6 +135,7 @@ class TestResult(models.Model):
                                        related_name="results")
     start_time     = models.DateTimeField()
     end_time       = models.DateTimeField()
+    date           = models.DateField()  # For easy date-based filtering
     correct        = models.PositiveSmallIntegerField()
     incorrect      = models.PositiveSmallIntegerField()
     not_attempted  = models.PositiveSmallIntegerField()

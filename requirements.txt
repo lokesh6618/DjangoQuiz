@@ -23,6 +23,7 @@ pytest-django
 
 gunicorn
 coverage
+requests
 
 
 # Username (superuser): admin_66  

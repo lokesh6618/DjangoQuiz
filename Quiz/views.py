@@ -1,7 +1,8 @@
 # views.py
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.contrib.auth.forms import AuthenticationForm
+from .forms import ExtendedUserCreationForm
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.utils import timezone
@@ -32,10 +33,20 @@ def register_page(request):
     if request.user.is_authenticated:
         return redirect("home")
 
-    form = UserCreationForm(request.POST or None)
+    form = ExtendedUserCreationForm(request.POST or None)
+    
     if request.method == "POST" and form.is_valid():
         user = form.save()
-        login(request, user)               # auto‑login after sign‑up
+        
+        # Create corresponding Teacher entry
+        Teacher.objects.create(
+            email=user.username,
+            teacher_id=form.cleaned_data["teacher_id"],
+            name=form.cleaned_data["name"],
+            password=user.password  # already hashed
+        )
+
+        login(request, user)
         return redirect("home")
 
     return render(request, "Quiz/register.html", {"form": form})

@@ -39,10 +39,10 @@ common_question_data = {
     "marks": 1
 }
 
-print("\n--- Inserting Questions (2 to 20) with Specific Answers ---")
+print("\n--- Inserting Questions (1 to 20) with Specific Answers ---")
 
 # Loop for question numbers 2 to 20
-for q_num in range(2, 21): # range(start, stop) - stop is exclusive
+for q_num in range(1, 21): # range(start, stop) - stop is exclusive
     # Get the specific answer for the current question number
     current_answer = questiona_all.get(q_num)
 
